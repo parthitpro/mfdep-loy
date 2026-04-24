@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quantum NAV Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    :root {
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.4);
+      --success: #10b981;
+      --danger: #ef4444;
+      --bg-dark: #020617;
+      --sidebar-bg: rgba(15, 23, 42, 0.8);
+      --card-bg: rgba(15, 23, 42, 0.4);
+      --border: rgba(255, 255, 255, 0.05);
+      --text-main: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Plus Jakarta Sans', sans-serif; 
+      background: #020617;
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    #quantum-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .nebula {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(129, 140, 248, 0.15) 0%, transparent 50%);
+      filter: blur(80px);
+      z-index: -1;
+      animation: pulse-nebula 15s infinite alternate;
+    }
+    @keyframes pulse-nebula {
+      0% { opacity: 0.5; transform: scale(1); }
+      100% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .sidebar {
+      width: 280px;
+      background: var(--sidebar-bg);
+      backdrop-filter: blur(40px);
+      border-right: 1px solid var(--border);
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 2rem 1.5rem;
+      z-index: 50;
+      transition: all 0.3s;
+    }
+
+    .main-content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 2.5rem;
+      max-width: calc(100vw - 280px);
+      transition: all 0.3s;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 3rem;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), #818cf8);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 1rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 600;
+      transition: all 0.3s;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.03);
+      color: white;
+    }
+
+    .nav-item.active {
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--primary);
+      border-color: rgba(99, 102, 241, 0.2);
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 1.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      padding: 1.5rem;
+      border-radius: 20px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%);
+      border: 1px solid var(--border);
+    }
+
+    .metric-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; }
+    .metric-value { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700; }
+
+    .table-container {
+      overflow-x: auto;
+      border-radius: 16px;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 1rem; color: var(--text-dim); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 1rem; border-bottom: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.875rem;
+    }
+    .btn-primary { 
+      background: var(--primary); 
+      color: white; 
+      border: none;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--primary-glow); }
+    
+    .btn-outline { 
+      background: transparent; 
+      border: 1px solid var(--border); 
+      color: white; 
+    }
+    .btn-outline:hover { background: rgba(255, 255, 255, 0.05); }
+
+    .fade-in { animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    .pos { color: var(--success); }
+    .neg { color: var(--danger); }
+    
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+
+    canvas { filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.2)); }
+
+    @media (max-width: 1024px) {
+      .sidebar { width: 80px; padding: 2rem 0.5rem; }
+      .sidebar span { display: none; }
+      .main-content { margin-left: 80px; max-width: calc(100vw - 80px); padding: 1.5rem; }
+      .logo-area h2 { display: none; }
+      .logo-area { margin-bottom: 2rem; }
+    }
+
+    @media (max-width: 640px) {
+      .sidebar { 
+        width: 100%; 
+        height: auto; 
+        position: relative; 
+        flex-direction: row; 
+        padding: 1rem; 
+        border-right: none; 
+        border-bottom: 1px solid var(--border);
+        overflow-x: auto;
+      }
+      .logo-area { margin-bottom: 0; margin-right: 1.5rem; }
+      nav { flex-direction: row; gap: 8px; display: flex; }
+      .nav-item { margin-bottom: 0; padding: 0.5rem 1rem; white-space: nowrap; font-size: 0.75rem; }
+      .main-content { margin-left: 0; max-width: 100vw; padding: 1rem; }
+      .sidebar .mt-auto { display: none; }
+      #quantum-bg { display: none; }
+      .metric-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="quantum-bg"></canvas>
+  <div class="nebula"></div>
+  <aside class="sidebar">
+    <div class="logo-area">
+      <div class="logo-icon">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+      </div>
+      <h2 class="text-xl font-extrabold tracking-tight text-white">QUANTUM</h2>
+    </div>
+
+    <nav class="flex-1">
+      <div id="tab-raw" class="nav-item active" onclick="switchTab('raw')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        <span>Market Ledger</span>
+      </div>
+      <div id="tab-perf" class="nav-item" onclick="switchTab('perf')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span>Performance</span>
+      </div>
+      <div id="tab-insights" class="nav-item" onclick="switchTab('insights')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <span>Intelligence</span>
+      </div>
+    </nav>
+
+    <div class="mt-auto pt-6 border-t border-white/5">
+      <button onclick="loadData()" class="btn btn-primary w-full justify-center mb-3">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <span>Sync Engine</span>
+      </button>
+      <button onclick="exportCSV()" class="btn btn-outline w-full justify-center text-xs">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        <span>Export Data</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div id="loader" class="flex flex-col items-center justify-center h-[80vh]">
+      <div class="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+      <p class="text-slate-500 font-bold tracking-widest text-xs uppercase">Initializing Financial Core...</p>
+    </div>
+
+    <div id="error-msg" class="hidden mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm font-bold text-center animate-pulse"></div>
+
+    <div id="dashboard" class="hidden space-y-8 fade-in">
+      <header class="flex justify-between items-end mb-10">
+        <div>
+          <p class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-2">Live Session Overview</p>
+          <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight" id="active-tab-title">Market Ledger</h1>
+        </div>
+        <div class="text-right hidden sm:block">
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Time Range</p>
+          <p class="text-sm font-bold text-white font-mono" id="date-display">-- / -- / --</p>
+        </div>
+      </header>
+
+      <div id="view-raw" class="space-y-8">
+        <div class="card p-4 sm:p-8">
+          <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
+            <h3 class="text-lg font-bold text-white">NAV Velocity Trend</h3>
+            <div class="flex flex-wrap items-center gap-4">
+              <label class="flex items-center gap-2 cursor-pointer bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all">
+                <input type="checkbox" onchange="toggleSMA(this.checked)" class="accent-indigo-500">
+                <span class="text-[10px] font-bold uppercase text-slate-400">Overlay 50D SMA</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all">
+                <input type="checkbox" onchange="toggleML(this.checked)" class="accent-indigo-500">
+                <span class="text-[10px] font-bold uppercase text-slate-400">ML Forecast (7D)</span>
+              </label>
+            </div>
+          </div>
+          <div class="h-[300px] sm:h-[400px]"><canvas id="rawChart"></canvas></div>
+        </div>
+        <div class="card p-0 overflow-hidden">
+          <div class="p-6 border-b border-white/5 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-white">Transaction Logs</h3>
+            <span class="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-1 rounded-md font-bold uppercase">Real-time</span>
+          </div>
+          <div class="table-container max-h-[500px] overflow-y-auto"><table class="w-full"><thead id="raw-tbl-head"></thead><tbody id="raw-tbl-body"></tbody></table></div>
+        </div>
+      </div>
+
+      <div id="view-perf" class="hidden space-y-8">
+        <div class="card">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6">Asset Masking & Visibility</h3>
+              <div id="fund-toggles" class="grid grid-cols-2 gap-4"></div>
+            </div>
+            <div class="border-t md:border-t-0 md:border-l border-white/5 pt-8 md:pt-0 md:pl-8">
+              <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6">Portfolio Weights (%)</h3>
+              <div id="weight-inputs" class="grid grid-cols-2 gap-4"></div>
+              <div id="weight-total" class="text-xs mt-4 text-right font-mono font-bold"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card p-4 sm:p-8">
+          <h3 class="text-lg font-bold text-white mb-8">Normalized Alpha Performance</h3>
+          <div class="h-[300px] sm:h-[400px]"><canvas id="perfChart"></canvas></div>
+        </div>
+        <div class="card p-0 overflow-hidden">
+          <div class="p-6 border-b border-white/5"><h3 class="text-lg font-bold text-white">Daily Variance Matrix</h3></div>
+          <div class="table-container max-h-[500px] overflow-y-auto"><table class="w-full"><thead id="perf-tbl-head"></thead><tbody id="perf-tbl-body"></tbody></table></div>
+        </div>
+      </div>
+
+      <div id="view-insights" class="hidden space-y-8">
+        <div id="metrics-grid" class="metric-grid"></div>
+        <div class="card p-4 sm:p-8">
+          <h3 class="text-lg font-bold text-white mb-8">Correlation Coefficient Matrix</h3>
+          <div class="table-container"><table class="w-full text-center"><thead id="corr-head"></thead><tbody id="corr-body"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const FUNDS = [
+      { code: '122639', name: 'Parag Parikh Flexi Cap Direct', color: '#3b82f6', weight: 25 },
+      { code: '119783', name: 'SBI Healthcare Opportunities Direct', color: '#f59e0b', weight: 25 },
+      { code: '147704', name: 'Motilal Oswal Large & Midcap Direct', color: '#10b981', weight: 25 },
+      { code: '118763', name: 'Nippon India Power & Infra Direct', color: '#ef4444', weight: 25 }
+    ];
+    let rawChart = null, perfChart = null, activeTab = 'raw', processedData = [], mergedData = {};
+    let showSMA = false, showML = false;
+    let currentResults = [], dataMap = new Map();
+    const RISK_FREE_RATE = 6.5; 
+
+    // === ML ENGINE FUNCTIONS ===
+    function calculateLinearRegression(data) {
+      const n = data.length;
+      if (n < 2) return { slope: 0, intercept: data[0] || 0 };
+      let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+      for (let i = 0; i < n; i++) {
+        sumX += i;
+        sumY += data[i];
+        sumXY += i * data[i];
+        sumXX += i * i;
+      }
+      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+      const intercept = (sumY - slope * sumX) / n;
+      return { slope, intercept };
+    }
+
+    function calculateRSquared(data, regressionLine) {
+      const n = data.length;
+      const meanY = data.reduce((a, b) => a + b, 0) / n;
+      let ssRes = 0, ssTot = 0;
+      for (let i = 0; i < n; i++) {
+        ssRes += Math.pow(data[i] - regressionLine[i], 2);
+        ssTot += Math.pow(data[i] - meanY, 2);
+      }
+      return ssTot === 0 ? 0 : 1 - (ssRes / ssTot);
+    }
+
+    function getAnomalies(returns, windowSize = 30) {
+      const anomalies = new Set();
+      if (returns.length < windowSize) return anomalies;
+      for (let i = windowSize; i < returns.length; i++) {
+        const window = returns.slice(i - windowSize, i);
+        const mean = window.reduce((a, b) => a + b, 0) / windowSize;
+        const stdDev = Math.sqrt(window.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / windowSize);
+        const zScore = Math.abs((returns[i] - mean) / (stdDev || 1));
+        if (zScore > 2.5) anomalies.add(i); 
+      }
+      return anomalies;
+    }
+
+    // === HELPERS ===
+    function formatDisplayDate(iso) {
+      const [y, m, d] = iso.split('-');
+      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      return `${d} ${months[parseInt(m)-1]} ${y.slice(2)}`;
+    }
+
+    function formatCurrency(val) {
+      if (val == null || isNaN(val)) return '₹0.00';
+      return '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatPct(val) {
+      if (val == null || isNaN(val)) return '<span class="neu">-</span>';
+      const s = val > 0 ? '+' : '';
+      const c = val > 0 ? 'pos' : (val < 0 ? 'neg' : 'neu');
+      return `<span class="${c} font-bold">${s}${val.toFixed(2)}%</span>`;
+    }
+
+    function switchTab(t) {
+      activeTab = t;
+      const titles = { 'raw': 'Market Ledger', 'perf': 'Performance Alpha', 'insights': 'Intelligence Core' };
+      document.getElementById('active-tab-title').textContent = titles[t];
+      
+      document.querySelectorAll('.nav-item').forEach(btn => btn.classList.toggle('active', btn.id === `tab-${t}`));
+      document.getElementById('view-raw').classList.toggle('hidden', t !== 'raw');
+      document.getElementById('view-perf').classList.toggle('hidden', t !== 'perf');
+      document.getElementById('view-insights').classList.toggle('hidden', t !== 'insights');
+    }
+
+    function toggleSMA(v) {
+      showSMA = v;
+      if (rawChart && currentResults) {
+        currentResults.forEach((f, i) => {
+          if (rawChart.data.datasets[currentResults.length + i]) {
+            rawChart.data.datasets[currentResults.length + i].hidden = !showSMA;
+          }
+        });
+        rawChart.update();
+      }
+    }
+
+    function toggleML(v) {
+      showML = v;
+      if (rawChart && currentResults) {
+        currentResults.forEach((f, i) => {
+          const forecastIdx = currentResults.length * 2 + i;
+          if (rawChart.data.datasets[forecastIdx]) {
+            rawChart.data.datasets[forecastIdx].hidden = !showML;
+          }
+        });
+        rawChart.update();
+      }
+    }
+
+    function updateWeight(index, val) {
+      FUNDS[index].weight = parseFloat(val) || 0;
+      const total = FUNDS.reduce((a, b) => a + b.weight, 0);
+      const indicator = document.getElementById('weight-total');
+      indicator.textContent = `Total: ${total.toFixed(1)}%`;
+      indicator.className = `text-xs mt-4 text-right font-mono ${Math.abs(total - 100) < 0.1 ? 'pos' : 'neg'}`;
+      
+      if (Math.abs(total - 100) < 0.1) {
+        calculatePortfolio();
+        if (perfChart) {
+          const datesAsc = Object.keys(mergedData).sort();
+          perfChart.data.datasets[currentResults.length].data = datesAsc.map(d => mergedData[d].portfolioCum);
+          perfChart.update();
+        }
+        renderInsights();
+      }
+    }
+
+    function calculatePortfolio() {
+      const datesAsc = Object.keys(mergedData).sort();
+      datesAsc.forEach((date, i) => {
+        let dailyWeightedReturn = 0;
+        const row = processedData[i];
+        FUNDS.forEach(f => {
+          if (row && row[f.code]) {
+            dailyWeightedReturn += (row[f.code].daily * (f.weight / 100));
+          }
+        });
+        
+        if (i === 0) {
+          mergedData[date].portfolioCum = 0;
+          mergedData[date].portfolioDaily = 0;
+        } else {
+          const prevCum = mergedData[datesAsc[i-1]].portfolioCum;
+          mergedData[date].portfolioCum = ((1 + prevCum/100) * (1 + dailyWeightedReturn/100) - 1) * 100;
+          mergedData[date].portfolioDaily = dailyWeightedReturn;
+        }
+      });
+    }
+
+    // === INSIGHTS CALCULATIONS ===
+    function calculateCAGR(startVal, endVal, days) {
+      if (days <= 0 || startVal <= 0 || isNaN(startVal) || isNaN(endVal)) return 0;
+      return (Math.pow(endVal / startVal, 365 / days) - 1) * 100;
+    }
+
+    function calculateVolatility(returns) {
+      const validReturns = returns.filter(v => !isNaN(v));
+      if (validReturns.length < 2) return 0;
+      const avg = validReturns.reduce((a, b) => a + b, 0) / validReturns.length;
+      const variance = validReturns.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / (validReturns.length - 1);
+      return Math.sqrt(variance) * Math.sqrt(252); 
+    }
+
+    function calculateSMA(data, period) {
+      const sma = [];
+      for (let i = 0; i < data.length; i++) {
+        if (i < period - 1) {
+          sma.push(null);
+          continue;
+        }
+        let sum = 0;
+        let valid = true;
+        for (let j = 0; j < period; j++) {
+          const val = data[i - j];
+          if (val == null) { valid = false; break; }
+          sum += val;
+        }
+        sma.push(valid ? sum / period : null);
+      }
+      return sma;
+    }
+
+    function calculateSharpe(cagr, vol) {
+      if (vol <= 0) return 0;
+      return (cagr - RISK_FREE_RATE) / vol;
+    }
+
+    function calculateMaxDrawdown(navSeries) {
+      const validNav = navSeries.filter(v => v != null && !isNaN(v));
+      if (validNav.length === 0) return 0;
+      let peak = validNav[0], maxDD = 0;
+      validNav.forEach(nav => {
+        if (nav > peak) peak = nav;
+        const dd = (peak - nav) / peak * 100;
+        if (dd > maxDD) maxDD = dd;
+      });
+      return maxDD;
+    }
+
+    function calculateRolling(returns, period) {
+      if (returns.length < period) return null;
+      let compounded = 1;
+      for (let i = returns.length - period; i < returns.length; i++) {
+        compounded *= (1 + returns[i] / 100);
+      }
+      return (compounded - 1) * 100;
+    }
+
+    function pearsonCorrelation(x, y) {
+      const n = x.length;
+      if (n !== y.length || n === 0) return 0;
+      const sumX = x.reduce((a, b) => a + b, 0);
+      const sumY = y.reduce((a, b) => a + b, 0);
+      const sumXY = x.reduce((a, b, i) => a + b * y[i], 0);
+      const sumX2 = x.reduce((a, b) => a + b * b, 0);
+      const sumY2 = y.reduce((a, b) => a + b * b, 0);
+      const denom = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+      return denom === 0 ? 0 : (n * sumXY - sumX * sumY) / denom;
+    }
+
+    function renderInsights() {
+      const grid = document.getElementById('metrics-grid');
+      const corrHead = document.getElementById('corr-head');
+      const corrBody = document.getElementById('corr-body');
+      
+      grid.innerHTML = '';
+      corrHead.innerHTML = '<tr><th class="text-left">Instrument</th>' + currentResults.map(f => `<th style="color:${f.color}">${f.name.split(' ')[0]}</th>`).join('') + '</tr>';
+      corrBody.innerHTML = '';
+
+      const pDates = Object.keys(mergedData).sort();
+      
+      // Portfolio Insight Card
+      const pReturns = pDates.map(d => mergedData[d].portfolioDaily);
+      const pCum = mergedData[pDates[pDates.length-1]].portfolioCum;
+      const pVol = calculateVolatility(pReturns);
+      const pSharpe = calculateSharpe(pCum * (365/pDates.length), pVol);
+      const pRolling = calculateRolling(pReturns, 21) || 0;
+
+      grid.innerHTML += `
+        <div class="metric-card border-t-4 border-white">
+          <h3 class="text-xs font-bold text-white uppercase mb-3 truncate">Weighted Portfolio</h3>
+          <div class="space-y-4">
+            <div><p class="text-[10px] text-slate-500 font-bold uppercase">Total Return</p><p class="text-xl font-bold pos">${pCum.toFixed(2)}%</p></div>
+            <div class="grid grid-cols-2 gap-4">
+              <div><p class="text-[10px] text-slate-500 font-bold uppercase">Sharpe</p><p class="text-sm font-bold text-blue-400">${pSharpe.toFixed(2)}</p></div>
+              <div><p class="text-[10px] text-slate-500 font-bold uppercase">1M Roll</p><p class="text-sm font-bold ${pRolling>=0?'pos':'neg'}">${pRolling.toFixed(1)}%</p></div>
+            </div>
+          </div>
+        </div>`;
+
+      currentResults.forEach(f => {
+        const navSeries = pDates.map(d => mergedData[d][f.code]);
+        const returns = pDates.map(d => dataMap.get(d)?.[f.code]?.daily || 0);
+        const cagr = calculateCAGR(navSeries.find(v => v > 0), navSeries[navSeries.length-1], pDates.length);
+        const vol = calculateVolatility(returns);
+        const mdd = calculateMaxDrawdown(navSeries);
+        const sharpe = calculateSharpe(cagr, vol);
+
+        const regression = calculateLinearRegression(navSeries);
+        const regValues = navSeries.map((_, i) => regression.slope * i + regression.intercept);
+        const stability = calculateRSquared(navSeries, regValues) * 100;
+        
+        grid.innerHTML += `
+          <div class="metric-card border-t-4" style="border-top-color:${f.color}">
+            <h3 class="text-xs font-bold text-slate-500 uppercase mb-3 truncate">${f.name.split(' ')[0]}</h3>
+            <div class="space-y-4">
+              <div><p class="text-[10px] text-slate-500 font-bold uppercase">CAGR</p><p class="text-xl font-bold ${cagr>=0?'pos':'neg'}">${cagr.toFixed(2)}%</p></div>
+              <div class="grid grid-cols-2 gap-4">
+                <div><p class="text-[10px] text-slate-500 font-bold uppercase">Stability</p><p class="text-sm font-bold text-emerald-400">${stability.toFixed(0)}%</p></div>
+                <div><p class="text-[10px] text-slate-500 font-bold uppercase">Sharpe</p><p class="text-sm font-bold text-blue-400">${sharpe.toFixed(2)}</p></div>
+              </div>
+            </div>
+          </div>`;
+
+        const rowHtml = currentResults.map(f2 => {
+          const f2Returns = pDates.map(d => dataMap.get(d)?.[f2.code]?.daily || 0);
+          const corr = pearsonCorrelation(returns, f2Returns);
+          const bg = corr > 0.6 ? 'rgba(16, 185, 129, 0.1)' : (corr < 0.3 ? 'rgba(244, 63, 94, 0.1)' : 'rgba(255, 255, 255, 0.02)');
+          const color = corr > 0.6 ? '#10b981' : (corr < 0.3 ? '#f43f5e' : '#94a3b8');
+          return `<td><div class="py-2 font-bold" style="background:${bg}; color:${color}">${corr.toFixed(2)}</div></td>`;
+        }).join('');
+        corrBody.innerHTML += `<tr><td class="text-left font-bold" style="color:${f.color}">${f.name.split(' ')[0]}</td>${rowHtml}</tr>`;
+      });
+    }
+
+    function exportCSV() {
+      if (processedData.length === 0) return alert('No data to export');
+      let csv = 'Date,' + FUNDS.map(f => `"${f.name}"`).join(',') + '\n';
+      processedData.forEach(d => {
+        csv += `${d.date},` + FUNDS.map(f => `${d[f.code]?.daily?.toFixed(2)||''}`).join(',') + '\n';
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'nav_daily_changes.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function loadData() {
+      const loader = document.getElementById('loader');
+      const dashboard = document.getElementById('dashboard');
+      const errorMsg = document.getElementById('error-msg');
+      const dateDisplay = document.getElementById('date-display');
+      const toggles = document.getElementById('fund-toggles');
+      const weightInputs = document.getElementById('weight-inputs');
+
+      loader.classList.remove('hidden');
+      dashboard.classList.add('hidden');
+      errorMsg.classList.add('hidden');
+
+      try {
+        const today = new Date();
+        const year = today.getFullYear();
+        const start = new Date(year, 3, 7);
+        if (today < start) start.setFullYear(year - 1);
+        const startStr = start.toISOString().split('T')[0];
+        const endStr = today.toISOString().split('T')[0];
+        dateDisplay.textContent = `${startStr.replace(/-/g, '/')} — ${endStr.replace(/-/g, '/')}`;
+
+        const settledResults = await Promise.allSettled(FUNDS.map(async f => {
+          const res = await fetch(`https://api.mfapi.in/mf/${f.code}?startDate=${startStr}&endDate=${endStr}`);
+          if (!res.ok) throw new Error(`API error for ${f.name}`);
+          const json = await res.json();
+          const history = (json.data || []).map(e => {
+            const [d, m, y] = e.date.split('-');
+            return { date: `${y}-${m}-${d}`, nav: parseFloat(e.nav) };
+          }).sort((a, b) => a.date.localeCompare(b.date));
+          return { ...f, history };
+        }));
+
+        currentResults = settledResults.filter(r => r.status === 'fulfilled').map(r => r.value);
+        if (currentResults.length === 0) throw new Error('SYSTEM_OFFLINE: FAILED TO FETCH AGGREGATE DATA');
+
+        mergedData = {};
+        currentResults.forEach(f => f.history.forEach(e => {
+          if (!mergedData[e.date]) mergedData[e.date] = { date: e.date };
+          mergedData[e.date][f.code] = e.nav;
+        }));
+
+        const datesAsc = Object.keys(mergedData).sort();
+        const datesDesc = [...datesAsc].reverse();
+
+        const lastValidNAV = {};
+        const tempProcessed = [];
+        const firstNavs = {};
+
+        datesAsc.forEach((date, i) => {
+          const row = { date };
+          currentResults.forEach(f => {
+            const currentNAV = mergedData[date][f.code];
+            if (currentNAV != null) {
+              const prevNAV = lastValidNAV[f.code];
+              const daily = prevNAV ? ((currentNAV - prevNAV) / prevNAV) * 100 : 0;
+              lastValidNAV[f.code] = currentNAV;
+              if (!firstNavs[f.code]) firstNavs[f.code] = currentNAV;
+              const cum = ((currentNAV - firstNavs[f.code]) / firstNavs[f.code]) * 100;
+              row[f.code] = { daily, cumulative: cum };
+            } else {
+              const prevRow = i > 0 ? tempProcessed[i-1] : null;
+              row[f.code] = prevRow && prevRow[f.code] ? { ...prevRow[f.code], daily: 0 } : { daily: 0, cumulative: 0 };
+            }
+          });
+          tempProcessed.push(row);
+        });
+        processedData = tempProcessed;
+        dataMap = new Map(processedData.map(p => [p.date, p]));
+
+        calculatePortfolio();
+
+        const anomaliesMap = new Map();
+        currentResults.forEach(f => {
+          const fundReturns = processedData.map(p => p[f.code]?.daily || 0);
+          anomaliesMap.set(f.code, getAnomalies(fundReturns));
+        });
+
+        // UI Updates
+        weightInputs.innerHTML = currentResults.map((f, i) => `
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-slate-500 font-bold uppercase truncate">${f.name.split(' ')[0]}</span>
+            <input type="number" value="${f.weight}" onchange="updateWeight(${i}, this.value)" 
+              class="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:border-indigo-500 outline-none transition-all">
+          </div>
+        `).join('');
+        updateWeight(0, currentResults[0].weight); // Init total indicator
+
+        toggles.innerHTML = currentResults.map((f, i) => `
+          <label class="flex items-center gap-3 cursor-pointer group">
+            <div class="relative flex items-center">
+              <input type="checkbox" checked onchange="toggleFund(${i}, this.checked)" class="sr-only peer">
+              <div class="w-10 h-5 bg-white/5 border border-white/10 rounded-full peer peer-checked:bg-indigo-500/20 peer-checked:border-indigo-500/40 transition-all"></div>
+              <div class="absolute left-1 w-3 h-3 bg-slate-600 rounded-full peer-checked:left-6 peer-checked:bg-indigo-400 transition-all"></div>
+            </div>
+            <span class="text-[11px] font-bold text-slate-400 group-hover:text-white transition-colors uppercase" style="color: ${f.color}CC">${f.name.split(' ')[0]}</span>
+          </label>
+        `).join('');
+
+        const lastDate = new Date(datesAsc[datesAsc.length - 1]);
+        const forecastLabels = [];
+        for (let i = 1; i <= 7; i++) {
+          const fDate = new Date(lastDate);
+          fDate.setDate(fDate.getDate() + i);
+          forecastLabels.push(fDate.toISOString().split('T')[0]);
+        }
+        const allLabels = [...datesAsc, ...forecastLabels];
+
+        // Tables
+        document.getElementById('raw-tbl-head').innerHTML = '<tr><th class="text-left">Date</th>' + currentResults.map(f => `<th style="color:${f.color}">${f.name.split(' ')[0]}</th>`).join('') + '</tr>';
+        document.getElementById('raw-tbl-body').innerHTML = datesDesc.slice(0, 30).map(d => {
+          const rowIdx = processedData.findIndex(p => p.date === d);
+          return `<tr><td class="text-left font-bold text-slate-400">${formatDisplayDate(d)}</td>` + currentResults.map(f => {
+            const isAnomaly = anomaliesMap.get(f.code)?.has(rowIdx);
+            const anomalyStyle = isAnomaly ? 'ring-1 ring-rose-500/50 bg-rose-500/5 rounded-md' : '';
+            return `<td class="${anomalyStyle}">${formatCurrency(mergedData[d][f.code])}</td>`;
+          }).join('') + '</tr>';
+        }).join('');
+
+        document.getElementById('perf-tbl-head').innerHTML = '<tr><th class="text-left">Date</th>' + currentResults.map(f => `<th style="color:${f.color}">${f.name.split(' ')[0]}</th>`).join('') + '<th class="text-white">Portfolio</th></tr>';
+        document.getElementById('perf-tbl-body').innerHTML = datesDesc.slice(0, 30).map(d => {
+          const row = dataMap.get(d);
+          return `<tr><td class="text-left font-bold text-slate-400">${formatDisplayDate(d)}</td>` + currentResults.map(f => {
+            return `<td>${formatPct(row?.[f.code]?.daily || 0)}</td>`;
+          }).join('') + `<td class="font-bold">${formatPct(mergedData[d].portfolioDaily)}</td></tr>`;
+        }).join('');
+
+        // Charts
+        const commonOptions = {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: false } },
+          scales: { 
+            x: { grid: { display: false }, ticks: { color: '#475569', font: { size: 10, weight: '600' }, maxTicksLimit: 10, callback: (v, i) => formatDisplayDate(allLabels[i]) } },
+            y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#475569', font: { size: 10, weight: '600' } } }
+          }
+        };
+
+        if (rawChart) rawChart.destroy();
+        rawChart = new Chart(document.getElementById('rawChart').getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: allLabels,
+            datasets: [
+              ...currentResults.map(f => ({
+                label: f.name.split(' ')[0], data: datesAsc.map(d => mergedData[d][f.code]),
+                borderColor: f.color, borderWidth: 2, tension: 0.2, pointRadius: 0, spanGaps: true
+              })),
+              ...currentResults.map(f => ({
+                label: `SMA50 ${f.name.split(' ')[0]}`, data: calculateSMA(datesAsc.map(d => mergedData[d][f.code]), 50),
+                borderColor: f.color, borderWidth: 1, borderDash: [4, 4], tension: 0.4, pointRadius: 0, hidden: !showSMA, spanGaps: true
+              })),
+              ...currentResults.map(f => {
+                const navSeries = datesAsc.map(d => mergedData[d][f.code]);
+                const regression = calculateLinearRegression(navSeries);
+                const forecastData = new Array(datesAsc.length - 1).fill(null);
+                forecastData.push(navSeries[navSeries.length - 1]); 
+                for (let i = 1; i <= 7; i++) {
+                  forecastData.push(regression.slope * (navSeries.length - 1 + i) + regression.intercept);
+                }
+                return {
+                  label: `ML Forecast ${f.name.split(' ')[0]}`, data: forecastData,
+                  borderColor: f.color, borderWidth: 1.5, borderDash: [2, 2], tension: 0, pointRadius: 0, hidden: !showML, spanGaps: true
+                };
+              })
+            ]
+          },
+          options: commonOptions
+        });
+
+        if (perfChart) perfChart.destroy();
+        perfChart = new Chart(document.getElementById('perfChart').getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: datesAsc.map(formatDisplayDate),
+            datasets: [
+              ...currentResults.map(f => ({
+                label: f.name.split(' ')[0], data: datesAsc.map(d => dataMap.get(d)?.[f.code]?.cumulative || 0),
+                borderColor: f.color, borderWidth: 1.5, tension: 0.3, pointRadius: 0
+              })),
+              {
+                label: 'WEIGHTED PORTFOLIO',
+                data: datesAsc.map(d => mergedData[d].portfolioCum),
+                borderColor: '#ffffff',
+                borderWidth: 3,
+                tension: 0.3,
+                pointRadius: 0,
+                shadowBlur: 10,
+                shadowColor: 'rgba(255,255,255,0.5)'
+              }
+            ]
+          },
+          options: { ...commonOptions, plugins: { legend: { display: true, position: 'bottom', labels: { color: '#64748b', boxWidth: 10, font: { size: 10, weight: '600' } } } } }
+        });
+
+        renderInsights();
+        loader.classList.add('hidden');
+        dashboard.classList.remove('hidden');
+
+      } catch (err) {
+        loader.classList.add('hidden');
+        errorMsg.textContent = `CRITICAL_EXCEPTION: ${err.message}`;
+        errorMsg.classList.remove('hidden');
+        console.error(err);
+      }
+    }
+
+    function toggleFund(index, visible) {
+      if (perfChart) {
+        const meta = perfChart.getDatasetMeta(index);
+        meta.hidden = !visible;
+        perfChart.update();
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadData();
+      initQuantumBackground();
+    });
+
+    function initQuantumBackground() {
+      const canvas = document.getElementById('quantum-bg');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let particles = [];
+      let mouse = { x: undefined, y: undefined };
+
+      window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+      window.addEventListener('mouseout', () => { mouse.x = undefined; mouse.y = undefined; });
+      window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
+
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      class Particle {
+        constructor() {
+          this.x = Math.random() * canvas.width;
+          this.y = Math.random() * canvas.height;
+          this.size = Math.random() * 15 + 12; 
+          this.speedX = (Math.random() - 0.5) * 0.6;
+          this.speedY = (Math.random() - 0.5) * 0.6;
+          this.baseColor = [255, 255, 255]; 
+          this.opacity = Math.random() * 0.2 + 0.05;
+        }
+
+        update() {
+          this.x += this.speedX;
+          this.y += this.speedY;
+          if (this.x > canvas.width) this.x = 0; else if (this.x < 0) this.x = canvas.width;
+          if (this.y > canvas.height) this.y = 0; else if (this.y < 0) this.y = canvas.height;
+          if (mouse.x !== undefined) {
+            let dx = mouse.x - this.x;
+            let dy = mouse.y - this.y;
+            let distance = Math.sqrt(dx*dx + dy*dy);
+            if (distance < 180) {
+              const force = (180 - distance) / 180;
+              this.x -= dx * force * 0.12;
+              this.y -= dy * force * 0.12;
+            }
+          }
+        }
+
+        draw() {
+          ctx.font = `${this.size}px "Plus Jakarta Sans"`;
+          ctx.fillStyle = `rgba(${this.baseColor[0]}, ${this.baseColor[1]}, ${this.baseColor[2]}, ${this.opacity})`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("₹", this.x, this.y);
+        }
+      }
+
+      for (let i = 0; i < 30; i++) particles.push(new Particle()); 
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < particles.length; i++) {
+          particles[i].update();
+          particles[i].draw();
+          for (let j = i + 1; j < particles.length; j++) {
+            let dx = particles[i].x - particles[j].x;
+            let dy = particles[i].y - particles[j].y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 150) {
+              const opacity = 1 - (dist / 150);
+              ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.1})`;
+              ctx.lineWidth = 0.5;
+              ctx.beginPath();
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+    }
+  </script>
+</body>
+</html>
