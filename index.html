@@ -37,7 +37,7 @@
       position: relative;
       width: 100%;
     }
-
+    
     #quantum-bg {
       position: fixed;
       top: 0;
@@ -48,10 +48,6 @@
       pointer-events: none;
       display: block;
     }
-    
-    @media (max-width: 768px) {
-      #quantum-bg { display: none; }
-    }
 
     .nebula {
       position: fixed;
@@ -59,24 +55,21 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: 
-        radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(129, 140, 248, 0.15) 0%, transparent 50%);
+      background:
+        radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(129, 140, 248, 0.3) 0%, transparent 50%);
       filter: blur(80px);
       z-index: -1;
       animation: pulse-nebula 15s infinite alternate;
       pointer-events: none;
     }
     
-    @media (max-width: 768px) {
-      .nebula { display: none; }
-    }
     @keyframes pulse-nebula {
-      0% { opacity: 0.5; transform: scale(1); }
+      0% { opacity: 0.8; transform: scale(1); }
       100% { opacity: 1; transform: scale(1.1); }
     }
-
     .sidebar {
+
       width: 280px;
       background: var(--sidebar-bg);
       backdrop-filter: blur(40px);
@@ -341,49 +334,25 @@
       <div id="view-raw" class="space-y-8">
         <div class="card p-4 sm:p-8">
           <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
-            <h3 class="text-lg font-bold text-white">NAV Velocity Trend</h3>
-            <div class="flex flex-wrap items-center gap-4">
-              <label class="flex items-center gap-2 cursor-pointer bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all">
-                <input type="checkbox" onchange="toggleSMA(this.checked)" class="accent-indigo-500">
-                <span class="text-[10px] font-bold uppercase text-slate-400">Overlay 50D SMA</span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all">
-                <input type="checkbox" onchange="toggleML(this.checked)" class="accent-indigo-500">
-                <span class="text-[10px] font-bold uppercase text-slate-400">ML Forecast (7D)</span>
-              </label>
-            </div>
+            <h3 class="text-lg font-bold text-white">NAV Trend</h3>
           </div>
           <div class="h-[300px] sm:h-[400px]"><canvas id="rawChart"></canvas></div>
         </div>
         <div class="card p-0 overflow-hidden">
           <div class="p-6 border-b border-white/5 flex justify-between items-center">
-            <h3 class="text-lg font-bold text-white">Transaction Logs</h3>
-            <span class="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-1 rounded-md font-bold uppercase">Real-time</span>
+            <h3 class="text-lg font-bold text-white">Transaction History</h3>
           </div>
           <div class="table-container max-h-[500px] overflow-y-auto"><table class="w-full"><thead id="raw-tbl-head"></thead><tbody id="raw-tbl-body"></tbody></table></div>
         </div>
       </div>
 
       <div id="view-perf" class="hidden space-y-8">
-        <div class="card">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6">Asset Masking & Visibility</h3>
-              <div id="fund-toggles" class="grid grid-cols-2 gap-4"></div>
-            </div>
-            <div class="border-t md:border-t-0 md:border-l border-white/5 pt-8 md:pt-0 md:pl-8">
-              <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6">Portfolio Weights (%)</h3>
-              <div id="weight-inputs" class="grid grid-cols-2 gap-4"></div>
-              <div id="weight-total" class="text-xs mt-4 text-right font-mono font-bold"></div>
-            </div>
-          </div>
-        </div>
         <div class="card p-4 sm:p-8">
-          <h3 class="text-lg font-bold text-white mb-8">Normalized Alpha Performance</h3>
+          <h3 class="text-lg font-bold text-white mb-8">Performance Comparison</h3>
           <div class="h-[300px] sm:h-[400px]"><canvas id="perfChart"></canvas></div>
         </div>
         <div class="card p-0 overflow-hidden">
-          <div class="p-6 border-b border-white/5"><h3 class="text-lg font-bold text-white">Daily Variance Matrix</h3></div>
+          <div class="p-6 border-b border-white/5"><h3 class="text-lg font-bold text-white">Daily Returns</h3></div>
           <div class="table-container max-h-[500px] overflow-y-auto"><table class="w-full"><thead id="perf-tbl-head"></thead><tbody id="perf-tbl-body"></tbody></table></div>
         </div>
       </div>
