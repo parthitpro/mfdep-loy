@@ -441,12 +441,16 @@
     function switchTab(t) {
       activeTab = t;
       const titles = { 'raw': 'Market Ledger', 'perf': 'Performance Alpha', 'insights': 'Intelligence Core' };
-      document.getElementById('active-tab-title').textContent = titles[t];
+      const titleEl = document.getElementById('active-tab-title');
+      if (titleEl) titleEl.textContent = titles[t];
       
       document.querySelectorAll('.nav-item').forEach(btn => btn.classList.toggle('active', btn.id === `tab-${t}`));
-      document.getElementById('view-raw').classList.toggle('hidden', t !== 'raw');
-      document.getElementById('view-perf').classList.toggle('hidden', t !== 'perf');
-      document.getElementById('view-insights').classList.toggle('hidden', t !== 'insights');
+      const rawView = document.getElementById('view-raw');
+      const perfView = document.getElementById('view-perf');
+      const insightsView = document.getElementById('view-insights');
+      if (rawView) rawView.classList.toggle('hidden', t !== 'raw');
+      if (perfView) perfView.classList.toggle('hidden', t !== 'perf');
+      if (insightsView) insightsView.classList.toggle('hidden', t !== 'insights');
     }
 
     function toggleSMA(v) {
@@ -477,9 +481,6 @@
     function updateWeight(index, val) {
       FUNDS[index].weight = parseFloat(val) || 0;
       const total = FUNDS.reduce((a, b) => a + b.weight, 0);
-      const indicator = document.getElementById('weight-total');
-      indicator.textContent = `Total: ${total.toFixed(1)}%`;
-      indicator.className = `text-xs mt-4 text-right font-mono ${Math.abs(total - 100) < 0.1 ? 'pos' : 'neg'}`;
       
       if (Math.abs(total - 100) < 0.1) {
         calculatePortfolio();
@@ -590,6 +591,8 @@
       const corrHead = document.getElementById('corr-head');
       const corrBody = document.getElementById('corr-body');
       
+      if (!grid || !corrHead || !corrBody) return;
+      
       grid.innerHTML = '';
       corrHead.innerHTML = '<tr><th class="text-left">Instrument</th>' + currentResults.map(f => `<th style="color:${f.color}">${f.name.split(' ')[0]}</th>`).join('') + '</tr>';
       corrBody.innerHTML = '';
@@ -668,8 +671,6 @@
       const dashboard = document.getElementById('dashboard');
       const errorMsg = document.getElementById('error-msg');
       const dateDisplay = document.getElementById('date-display');
-      const toggles = document.getElementById('fund-toggles');
-      const weightInputs = document.getElementById('weight-inputs');
 
       loader.classList.remove('hidden');
       dashboard.classList.add('hidden');
@@ -740,27 +741,6 @@
           anomaliesMap.set(f.code, getAnomalies(fundReturns));
         });
 
-        // UI Updates
-        weightInputs.innerHTML = currentResults.map((f, i) => `
-          <div class="flex flex-col gap-1">
-            <span class="text-[10px] text-slate-500 font-bold uppercase truncate">${f.name.split(' ')[0]}</span>
-            <input type="number" value="${f.weight}" onchange="updateWeight(${i}, this.value)" 
-              class="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:border-indigo-500 outline-none transition-all">
-          </div>
-        `).join('');
-        updateWeight(0, currentResults[0].weight); // Init total indicator
-
-        toggles.innerHTML = currentResults.map((f, i) => `
-          <label class="flex items-center gap-3 cursor-pointer group">
-            <div class="relative flex items-center">
-              <input type="checkbox" checked onchange="toggleFund(${i}, this.checked)" class="sr-only peer">
-              <div class="w-10 h-5 bg-white/5 border border-white/10 rounded-full peer peer-checked:bg-indigo-500/20 peer-checked:border-indigo-500/40 transition-all"></div>
-              <div class="absolute left-1 w-3 h-3 bg-slate-600 rounded-full peer-checked:left-6 peer-checked:bg-indigo-400 transition-all"></div>
-            </div>
-            <span class="text-[11px] font-bold text-slate-400 group-hover:text-white transition-colors uppercase" style="color: ${f.color}CC">${f.name.split(' ')[0]}</span>
-          </label>
-        `).join('');
-
         const lastDate = new Date(datesAsc[datesAsc.length - 1]);
         const forecastLabels = [];
         for (let i = 1; i <= 7; i++) {
@@ -771,8 +751,13 @@
         const allLabels = [...datesAsc, ...forecastLabels];
 
         // Tables
-        document.getElementById('raw-tbl-head').innerHTML = '<tr><th class="text-left">Date</th>' + currentResults.map(f => `<th style="color:${f.color}">${f.name.split(' ')[0]}</th>`).join('') + '</tr>';
-        document.getElementById('raw-tbl-body').innerHTML = datesDesc.slice(0, 30).map(d => {
+        const rawTblHead = document.getElementById('raw-tbl-head');
+        const rawTblBody = document.getElementById('raw-tbl-body');
+        const perfTblHead = document.getElementById('perf-tbl-head');
+        const perfTblBody = document.getElementById('perf-tbl-body');
+        
+        if (rawTblHead) rawTblHead.innerHTML = '<tr><th class="text-left">Date</th>' + currentResults.map(f => `<th style="color:${f.color}">${f.name.split(' ')[0]}</th>`).join('') + '</tr>';
+        if (rawTblBody) rawTblBody.innerHTML = datesDesc.slice(0, 30).map(d => {
           const rowIdx = processedData.findIndex(p => p.date === d);
           return `<tr><td class="text-left font-bold text-slate-400">${formatDisplayDate(d)}</td>` + currentResults.map(f => {
             const isAnomaly = anomaliesMap.get(f.code)?.has(rowIdx);
@@ -781,8 +766,8 @@
           }).join('') + '</tr>';
         }).join('');
 
-        document.getElementById('perf-tbl-head').innerHTML = '<tr><th class="text-left">Date</th>' + currentResults.map(f => `<th style="color:${f.color}">${f.name.split(' ')[0]}</th>`).join('') + '<th class="text-white">Portfolio</th></tr>';
-        document.getElementById('perf-tbl-body').innerHTML = datesDesc.slice(0, 30).map(d => {
+        if (perfTblHead) perfTblHead.innerHTML = '<tr><th class="text-left">Date</th>' + currentResults.map(f => `<th style="color:${f.color}">${f.name.split(' ')[0]}</th>`).join('') + '<th class="text-white">Portfolio</th></tr>';
+        if (perfTblBody) perfTblBody.innerHTML = datesDesc.slice(0, 30).map(d => {
           const row = dataMap.get(d);
           return `<tr><td class="text-left font-bold text-slate-400">${formatDisplayDate(d)}</td>` + currentResults.map(f => {
             return `<td>${formatPct(row?.[f.code]?.daily || 0)}</td>`;
@@ -808,61 +793,67 @@
         }
 
         if (rawChart) rawChart.destroy();
-        rawChart = new Chart(document.getElementById('rawChart').getContext('2d'), {
-          type: 'line',
-          data: {
-            labels: allLabels,
-            datasets: [
-              ...currentResults.map(f => ({
-                label: f.name.split(' ')[0], data: datesAsc.map(d => mergedData[d][f.code]),
-                borderColor: f.color, borderWidth: 2, tension: 0.2, pointRadius: 0, spanGaps: true
-              })),
-              ...currentResults.map(f => ({
-                label: `SMA50 ${f.name.split(' ')[0]}`, data: calculateSMA(datesAsc.map(d => mergedData[d][f.code]), 50),
-                borderColor: f.color, borderWidth: 1, borderDash: [4, 4], tension: 0.4, pointRadius: 0, hidden: !showSMA, spanGaps: true
-              })),
-              ...currentResults.map(f => {
-                const navSeries = datesAsc.map(d => mergedData[d][f.code]);
-                const regression = calculateLinearRegression(navSeries);
-                const forecastData = new Array(datesAsc.length - 1).fill(null);
-                forecastData.push(navSeries[navSeries.length - 1]); 
-                for (let i = 1; i <= 7; i++) {
-                  forecastData.push(regression.slope * (navSeries.length - 1 + i) + regression.intercept);
-                }
-                return {
-                  label: `ML Forecast ${f.name.split(' ')[0]}`, data: forecastData,
-                  borderColor: f.color, borderWidth: 1.5, borderDash: [2, 2], tension: 0, pointRadius: 0, hidden: !showML, spanGaps: true
-                };
-              })
-            ]
-          },
-          options: commonOptions
-        });
+        const rawCanvas = document.getElementById('rawChart');
+        if (rawCanvas) {
+          rawChart = new Chart(rawCanvas.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: allLabels,
+              datasets: [
+                ...currentResults.map(f => ({
+                  label: f.name.split(' ')[0], data: datesAsc.map(d => mergedData[d][f.code]),
+                  borderColor: f.color, borderWidth: 2, tension: 0.2, pointRadius: 0, spanGaps: true
+                })),
+                ...currentResults.map(f => ({
+                  label: `SMA50 ${f.name.split(' ')[0]}`, data: calculateSMA(datesAsc.map(d => mergedData[d][f.code]), 50),
+                  borderColor: f.color, borderWidth: 1, borderDash: [4, 4], tension: 0.4, pointRadius: 0, hidden: !showSMA, spanGaps: true
+                })),
+                ...currentResults.map(f => {
+                  const navSeries = datesAsc.map(d => mergedData[d][f.code]);
+                  const regression = calculateLinearRegression(navSeries);
+                  const forecastData = new Array(datesAsc.length - 1).fill(null);
+                  forecastData.push(navSeries[navSeries.length - 1]); 
+                  for (let i = 1; i <= 7; i++) {
+                    forecastData.push(regression.slope * (navSeries.length - 1 + i) + regression.intercept);
+                  }
+                  return {
+                    label: `ML Forecast ${f.name.split(' ')[0]}`, data: forecastData,
+                    borderColor: f.color, borderWidth: 1.5, borderDash: [2, 2], tension: 0, pointRadius: 0, hidden: !showML, spanGaps: true
+                  };
+                })
+              ]
+            },
+            options: commonOptions
+          });
+        }
 
         if (perfChart) perfChart.destroy();
-        perfChart = new Chart(document.getElementById('perfChart').getContext('2d'), {
-          type: 'line',
-          data: {
-            labels: datesAsc.map(formatDisplayDate),
-            datasets: [
-              ...currentResults.map(f => ({
-                label: f.name.split(' ')[0], data: datesAsc.map(d => dataMap.get(d)?.[f.code]?.cumulative || 0),
-                borderColor: f.color, borderWidth: 1.5, tension: 0.3, pointRadius: 0
-              })),
-              {
-                label: 'WEIGHTED PORTFOLIO',
-                data: datesAsc.map(d => mergedData[d].portfolioCum),
-                borderColor: '#ffffff',
-                borderWidth: 3,
-                tension: 0.3,
-                pointRadius: 0,
-                shadowBlur: 10,
-                shadowColor: 'rgba(255,255,255,0.5)'
-              }
-            ]
-          },
-          options: { ...commonOptions, plugins: { legend: { display: true, position: 'bottom', labels: { color: '#64748b', boxWidth: 10, font: { size: 10, weight: '600' } } } } }
-        });
+        const perfCanvas = document.getElementById('perfChart');
+        if (perfCanvas) {
+          perfChart = new Chart(perfCanvas.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: datesAsc.map(formatDisplayDate),
+              datasets: [
+                ...currentResults.map(f => ({
+                  label: f.name.split(' ')[0], data: datesAsc.map(d => dataMap.get(d)?.[f.code]?.cumulative || 0),
+                  borderColor: f.color, borderWidth: 1.5, tension: 0.3, pointRadius: 0
+                })),
+                {
+                  label: 'WEIGHTED PORTFOLIO',
+                  data: datesAsc.map(d => mergedData[d].portfolioCum),
+                  borderColor: '#ffffff',
+                  borderWidth: 3,
+                  tension: 0.3,
+                  pointRadius: 0,
+                  shadowBlur: 10,
+                  shadowColor: 'rgba(255,255,255,0.5)'
+                }
+              ]
+            },
+            options: { ...commonOptions, plugins: { legend: { display: true, position: 'bottom', labels: { color: '#64748b', boxWidth: 10, font: { size: 10, weight: '600' } } } } }
+          });
+        }
 
         renderInsights();
         loader.classList.add('hidden');
